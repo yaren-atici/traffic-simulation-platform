@@ -1,0 +1,67 @@
+### 1. Add intersection - Gdansk Center
+POST http://localhost:8080/api/intersections
+Content-Type: application/json
+
+{
+  "name": "Gdansk Center",
+  "latitude": 54.3520,
+  "longitude": 18.6466
+}
+
+### 2. Add intersection - Sopot
+POST http://localhost:8080/api/intersections
+Content-Type: application/json
+
+{
+  "name": "Sopot",
+  "latitude": 54.4418,
+  "longitude": 18.5601
+}
+
+### 3. Add intersection - Gdynia
+POST http://localhost:8080/api/intersections
+Content-Type: application/json
+
+{
+  "name": "Gdynia",
+  "latitude": 54.5189,
+  "longitude": 18.5305
+}
+
+### 4. List all intersections
+GET http://localhost:8080/api/intersections
+
+### 5. Add road - Gdansk Center to Sopot
+POST http://localhost:8080/api/roads
+Content-Type: application/json
+
+{
+  "fromId": 1,
+  "toId": 2,
+  "lengthMeters": 9000,
+  "speedLimitKmh": 60
+}
+
+### 6. Add road - Sopot to Gdynia
+POST http://localhost:8080/api/roads
+Content-Type: application/json
+
+{
+  "fromId": 2,
+  "toId": 3,
+  "lengthMeters": 7000,
+  "speedLimitKmh": 60
+}
+
+### 7. Calculate route: Gdansk Center (1) -> Gdynia (3)
+GET http://localhost:8080/api/route?fromId=1&toId=3
+### 8. Check roads
+GET http://localhost:8080/api/roads
+
+### 9. Test single hop: Gdansk (1) -> Sopot (2)
+GET http://localhost:8080/api/route?fromId=1&toId=2
+### 10. Spawn a vehicle: Gdansk Center -> Gdynia
+POST http://localhost:8080/api/simulation/spawn?fromId=1&toId=3
+
+### 11. Check active vehicles
+GET http://localhost:8080/api/simulation/active

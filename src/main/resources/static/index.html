@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Traffic Simulation Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1033, #2d1b4e);
+            color: #f0e6ff;
+            margin: 0;
+            padding: 30px;
+        }
+        h1 {
+            background: linear-gradient(90deg, #ff6ec7, #a05eff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .panel {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(160, 94, 255, 0.2);
+        }
+        select, button {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        button {
+            background: linear-gradient(90deg, #ff6ec7, #a05eff);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            opacity: 0.85;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .badge {
+            background: #a05eff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<h1>🚦 Traffic Simulation Dashboard</h1>
+
+<div class="panel">
+    <h3>Spawn a Vehicle</h3>
+    <label>From:</label>
+    <select id="fromSelect"></select>
+    <label>To:</label>
+    <select id="toSelect"></select>
+    <button onclick="spawnVehicle()">Spawn Vehicle</button>
+</div>
+
+<div class="panel">
+    <h3>Live Vehicles</h3>
+    <table id="vehicleTable">
+        <thead>
+        <tr><th>Vehicle ID</th><th>Current Position</th><th>Progress</th></tr>
+        </thead>
+        <tbody id="vehicleTableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    let intersections = [];
+    let vehicles = {};
+
+    async function loadIntersections() {
+        const res = await fetch('/api/intersections');
+        intersections = await res.json();
+        const fromSelect = document.getElementById('fromSelect');
+        const toSelect = document.getElementById('toSelect');
+        fromSelect.innerHTML = '';
+        toSelect.innerHTML = '';
+        intersections.forEach(i => {
+            fromSelect.innerHTML += `<option value="${i.id}">${i.name}</option>`;
+            toSelect.innerHTML += `<option value="${i.id}">${i.name}</option>`;
+        });
+    }
+
+    async function spawnVehicle() {
+        const fromId = document.getElementById('fromSelect').value;
+        const toId = document.getElementById('toSelect').value;
+        await fetch(`/api/simulation/spawn?fromId=${fromId}&toId=${toId}`, { method: 'POST' });
+    }
+
+    function renderVehicles() {
+        const tbody = document.getElementById('vehicleTableBody');
+        tbody.innerHTML = '';
+        Object.values(vehicles).forEach(v => {
+            const progress = `${v.currentIndex + 1} / ${v.route.length}`;
+            tbody.innerHTML += `<tr>
+                    <td><span class="badge">${v.id}</span></td>
+                    <td>${v.currentPosition ? v.currentPosition.name : '-'}</td>
+                    <td>${progress}</td>
+                </tr>`;
+        });
+    }
+
+    const socket = new SockJS('/ws');
+    const stompClient = new StompJs.Client({
+        webSocketFactory: () => socket
+    });
+
+    stompClient.onConnect = () => {
+        stompClient.subscribe('/topic/vehicles', (message) => {
+            const vehicle = JSON.parse(message.body);
+            vehicles[vehicle.id] = vehicle;
+            if (vehicle.finished) {
+                setTimeout(() => {
+                    delete vehicles[vehicle.id];
+                    renderVehicles();
+                }, 2000);
+            }
+            renderVehicles();
+        });
+    };
+
+    stompClient.activate();
+    loadIntersections();
+</script>
+</body>
+</html>
